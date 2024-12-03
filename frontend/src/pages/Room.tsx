@@ -209,8 +209,8 @@ function Room() {
 
   const handlePressEnter = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (!comment) return;
-    if(currentWord === comment.trim()) {
-      console.log("matched")
+    if (currentWord === comment.trim()) {
+      console.log("matched");
       socket.emit("round_over", roomId, socket.id);
       handleShowConfetti();
     }
@@ -223,17 +223,16 @@ function Room() {
     const duration = 5 * 1000;
     const animationEnd = Date.now() + duration;
     const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
- 
-    const randomInRange = (min: number, max: number) =>
-      Math.random() * (max - min) + min;
- 
+
+    const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
+
     const interval = window.setInterval(() => {
       const timeLeft = animationEnd - Date.now();
- 
+
       if (timeLeft <= 0) {
         return clearInterval(interval);
       }
- 
+
       const particleCount = 50 * (timeLeft / duration);
       confetti({
         ...defaults,
@@ -360,7 +359,7 @@ function Room() {
         setOpen={setShowWordsModal}
         setCurrentWord={setCurrentWord}
       />
-      <WinnerModal open={showWinnerModal} setOpen={setShowWinnerModal} winner="afaq"/>
+      <WinnerModal open={showWinnerModal} setOpen={setShowWinnerModal} winner="afaq" />
     </div>
   );
 }
