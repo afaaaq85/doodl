@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { Button } from "@/components/ui/button";
 
 function Home() {
   const [roomId, setRoomId] = useState("");
@@ -44,8 +45,7 @@ function Home() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen">
       <h1 className="text-4xl  font-bold ">Scribble Game</h1>
-
-      <div className="flex flex-col gap-5 items-start">
+      <div className="flex flex-col gap-5 items-center">
         <div className="mt-4 flex flex-col gap-2">
           <input
             type="text"
@@ -64,12 +64,12 @@ function Home() {
         </div>
 
         <div>
-          <button onClick={handleCreateRoom} className="bg-blue-500 text-white p-2 rounded">
+          <Button onClick={handleCreateRoom} className="bg-blue-500 text-white rounded">
             Create Room
-          </button>
-          <button onClick={handleJoinRoom} className="bg-green-500 text-white p-2 rounded ml-2">
+          </Button>
+          <Button onClick={handleJoinRoom} className="bg-green-500 text-white rounded ml-2">
             Join Room
-          </button>
+          </Button>
         </div>
       </div>
     </div>

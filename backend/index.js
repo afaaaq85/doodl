@@ -43,7 +43,7 @@ io.on('connection', (socket) => {
 
     if (playerExists) {
       socket.emit('error_message', 'Player already exists.');
-      console.log("player already exists),room:",rooms[roomId].players);
+      console.log("player already exists),room:", rooms[roomId].players);
       return;
     }
 
@@ -73,6 +73,17 @@ io.on('connection', (socket) => {
     socket.to(roomId).emit('clear_canvas');
   });
 
+  // read comments from frontend 
+  socket.on("comment", (roomId, socketId, comment) => {
+    const player = rooms[roomId]?.players?.find((player) => player.id === socketId);
+    console.log("player:", player);
+    io.to(roomId).emit("comment", player, comment);
+  })
+
+  socket.on('round_over', (roomId, socketId) => {
+    io.to(roomId).emit('round_over');
+  });
+
   socket.on('disconnect', () => {
     console.log('User disconnected:', socket.id);
     for (const roomId in rooms) {
@@ -82,6 +93,7 @@ io.on('connection', (socket) => {
       io.to(roomId).emit('update_players', rooms[roomId].players);
     }
   });
+
 });
 
 server.listen(5000, () => {

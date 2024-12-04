@@ -3,6 +3,10 @@ import { useParams, useLocation, useNavigate } from "react-router-dom";
 import socket from "../services/socket";
 import { Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import Comments from "@/components/room/Comments";
+import WordsModal from "@/components/room/WordsModal";
+import confetti from "canvas-confetti";
+import WinnerModal from "@/components/room/WinnerModal";
 
 interface Player {
   id: string;
@@ -21,18 +25,27 @@ interface DrawingData {
   endY: number;
 }
 
+interface CommentsInterface {
+  // id: string;
+  name: string;
+  comment: string;
+}
+
 function Room() {
   const location = useLocation();
   const navigate = useNavigate();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [context, setContext] = useState<CanvasRenderingContext2D | null>(null);
-
+  const [comment, setComment] = useState("");
+  const [userComments, setUserComments] = useState<CommentsInterface[]>([]);
   const playerName = location.state?.playerName || `player_${new Date().getSeconds()}`;
   const roomId = useParams().roomId;
-
   const [players, setPlayers] = useState<Player[]>([]);
   const [isDrawer, setIsDrawer] = useState(false);
   const [isDrawing, setIsDrawing] = useState(false);
+  const [currentWord, setCurrentWord] = useState("");
+  const [showWordsModal, setShowWordsModal] = useState(false);
+  const [showWinnerModal, setShowWinnerModal] = useState(false);
 
   // Drawing settings
   const [strokeColor, setStrokeColor] = useState("#000000");
@@ -114,8 +127,14 @@ function Room() {
       }
     });
 
+    socket.on("comment", (player: Player, comment: string) => {
+      console.log("comment", player, comment);
+      setUserComments((prevComments) => [...prevComments, { name: player.name, comment }]);
+    });
+
     return () => {
       socket.off("draw_incremental");
+      socket.off("comment");
     };
   }, [context]);
 
@@ -177,7 +196,8 @@ function Room() {
   };
 
   const handleStartGame = () => {
-    socket.emit("start_game", roomId);
+    // socket.emit("start_game", roomId);
+    setShowWordsModal(true);
   };
 
   const clearCanvas = () => {
@@ -185,6 +205,47 @@ function Room() {
 
     context.clearRect(0, 0, context.canvas.width, context.canvas.height);
     socket.emit("clear_canvas", roomId);
+  };
+
+  const handlePressEnter = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!comment) return;
+    if(currentWord === comment.trim()) {
+      console.log("matched")
+      socket.emit("round_over", roomId, socket.id);
+      handleShowConfetti();
+    }
+    setComment("");
+    socket.emit("comment", roomId, socket.id, e.currentTarget.value);
+    e.currentTarget.value = "";
+  };
+
+  const handleShowConfetti = () => {
+    const duration = 5 * 1000;
+    const animationEnd = Date.now() + duration;
+    const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
+ 
+    const randomInRange = (min: number, max: number) =>
+      Math.random() * (max - min) + min;
+ 
+    const interval = window.setInterval(() => {
+      const timeLeft = animationEnd - Date.now();
+ 
+      if (timeLeft <= 0) {
+        return clearInterval(interval);
+      }
+ 
+      const particleCount = 50 * (timeLeft / duration);
+      confetti({
+        ...defaults,
+        particleCount,
+        origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 },
+      });
+      confetti({
+        ...defaults,
+        particleCount,
+        origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 },
+      });
+    }, 250);
   };
 
   return (
@@ -234,37 +295,72 @@ function Room() {
                 </Button>
               )}
             </div>
-            <canvas
-              ref={canvasRef}
-              className="border border-gray-300 rounded-lg"
-              onMouseDown={startDrawing}
-              onMouseMove={draw}
-              onMouseUp={stopDrawing}
-              onMouseOut={stopDrawing}
-              style={{ cursor: isDrawer ? "crosshair" : "default" }}
-            />
-          </div>
-          <div className="comment">
-            <input
-              className="border rounded-md w-full px-3 py-2"
-              placeholder="Enter your guess..."
-            />
-          </div>
-        </div>
 
-        <div className="players flex w-full lg:flex-1 flex-col col-span-1 border rounded-md h-[500px] p-2">
-          <p className="font-bold">Players</p>
-          <ol className="flex flex-col gap-0 mt-2 list-decimal list-inside">
-            {players.map((player) => (
-              <li key={player.id}>
-                {player.name}
-                {player.id === socket.id && " (You)"}
-                {player.drawer && " (Drawing)"}
-              </li>
-            ))}
-          </ol>
+            {/* word display */}
+            {currentWord && (
+              <div className="flex w-full justify-center gap-2">
+                <p className="font-bold">Word:</p>
+                {currentWord.split("").map((_, index) => (
+                  <span key={index} className="font-bold">
+                    _
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* middle container */}
+            <div className="w-full grid grid-cols-1 md:grid-cols-6 lg:flex-row flex-col items-start gap-2">
+              <div className="players flex col-span-1 flex-col border rounded-md min-h-[500px] p-2">
+                <p className="font-bold">Players</p>
+                <ol className="flex flex-col gap-0 mt-2 list-decimal list-inside">
+                  {players.map((player) => (
+                    <li key={player.id}>
+                      {player.name}
+                      {player.id === socket.id && " (You)"}
+                      {player.drawer && " (Drawing)"}
+                    </li>
+                  ))}
+                </ol>
+              </div>
+              <div className="players flex col-span-1 md:col-span-3 lg:col-span-4  flex-col h-[500px]">
+                <canvas
+                  ref={canvasRef}
+                  className="border border-gray-300 rounded-lg h-full"
+                  onMouseDown={startDrawing}
+                  onMouseMove={draw}
+                  onMouseUp={stopDrawing}
+                  onMouseOut={stopDrawing}
+                  style={{ cursor: isDrawer ? "crosshair" : "default" }}
+                />
+              </div>
+              <div className="flex flex-col md:col-span-2 lg:col-span-1 col-span-1 gap-2">
+                <div className="comments-section flex  flex-col border rounded-md min-h-[500px] p-2">
+                  <Comments commentsData={userComments} />
+                </div>
+                <div className="comment">
+                  <input
+                    className="border rounded-md w-full px-3 py-2"
+                    value={comment}
+                    onChange={(e) => setComment(e.target.value)}
+                    placeholder="Enter your guess..."
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        handlePressEnter(e);
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
+      <WordsModal
+        open={showWordsModal}
+        setOpen={setShowWordsModal}
+        setCurrentWord={setCurrentWord}
+      />
+      <WinnerModal open={showWinnerModal} setOpen={setShowWinnerModal} winner="afaq"/>
     </div>
   );
 }
