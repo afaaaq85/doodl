@@ -80,8 +80,14 @@ io.on('connection', (socket) => {
     io.to(roomId).emit("comment", player, comment);
   })
 
+  socket.on("word_selected", (word, roomId) => {
+    rooms[roomId].word = word;
+    io.to(roomId).emit("word_selected", word);
+  })
+
   socket.on('round_over', (roomId, socketId) => {
-    io.to(roomId).emit('round_over');
+    const winnerPLayer = rooms[roomId]?.players?.find((player) => player.id === socketId);
+    io.to(roomId).emit('round_over', winnerPLayer);
   });
 
   socket.on('disconnect', () => {

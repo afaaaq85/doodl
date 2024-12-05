@@ -8,16 +8,36 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { wordList } from "@/utils/wordList";
+import socket from "@/services/socket";
+import { useEffect } from "react";
 
 const WordsModal = ({
   open,
   setOpen,
   setCurrentWord,
+  roomId
 }: {
   open: boolean;
   setOpen: (open: boolean) => void;
   setCurrentWord: (word: string) => void;
+  roomId: string | undefined;
 }) => {
+  const handleSelectWord = (word: string) => {
+    setCurrentWord(word);
+    socket.emit("word_selected", word, roomId);
+    socket.emit("start_game", roomId);
+    setOpen(false);
+  };
+
+  useEffect(() => {
+    socket.on("word_selected", (word) => {
+      setCurrentWord(word);
+    });
+    return () => {
+      socket.off("word_selected");
+    };
+  }, []);
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="sm:max-w-md">
@@ -36,8 +56,7 @@ const WordsModal = ({
                 size="sm"
                 className="px-3"
                 onClick={() => {
-                  setCurrentWord(word);
-                  setOpen(false);
+                  handleSelectWord(word);
                 }}
               >
                 {word}

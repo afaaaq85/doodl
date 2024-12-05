@@ -1,12 +1,13 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import socket from "../services/socket";
-import { Copy } from "lucide-react";
+import { Brush, Copy, Eraser } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Comments from "@/components/room/Comments";
 import WordsModal from "@/components/room/WordsModal";
 import confetti from "canvas-confetti";
 import WinnerModal from "@/components/room/WinnerModal";
+import { RainbowButton } from "@/components/ui/rainbow-button";
 
 interface Player {
   id: string;
@@ -46,10 +47,12 @@ function Room() {
   const [currentWord, setCurrentWord] = useState("");
   const [showWordsModal, setShowWordsModal] = useState(false);
   const [showWinnerModal, setShowWinnerModal] = useState(false);
+  const [winnerName, setWinnerName] = useState("");
 
   // Drawing settings
   const [strokeColor, setStrokeColor] = useState("#000000");
   const [strokeWidth, setStrokeWidth] = useState(5);
+  const colors = ["#000000", "#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#FF00FF", "#00FFFF"];
 
   // Previous drawing position
   const [lastPosition, setLastPosition] = useState<{ x: number; y: number } | null>(null);
@@ -132,9 +135,17 @@ function Room() {
       setUserComments((prevComments) => [...prevComments, { name: player.name, comment }]);
     });
 
+    socket.on("round_over", (winner: Player) => {
+      setWinnerName(winner.name);
+      // setCurrentWord("");
+      setShowWinnerModal(true);
+      handleShowConfetti();
+    });
+
     return () => {
       socket.off("draw_incremental");
       socket.off("comment");
+      socket.off("round_over");
     };
   }, [context]);
 
@@ -196,7 +207,6 @@ function Room() {
   };
 
   const handleStartGame = () => {
-    // socket.emit("start_game", roomId);
     setShowWordsModal(true);
   };
 
@@ -208,10 +218,11 @@ function Room() {
   };
 
   const handlePressEnter = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (!comment) return;
+    if (!comment || comment.trim().length === 0) return;
     if (currentWord === comment.trim()) {
       console.log("matched");
       socket.emit("round_over", roomId, socket.id);
+      setShowWinnerModal(true);
       handleShowConfetti();
     }
     setComment("");
@@ -248,9 +259,9 @@ function Room() {
   };
 
   return (
-    <div className="w-screen h-screen flex flex-col gap-2 p-4 ">
-      <div className="flex w-full justify-between">
-        <div className="flex gap-1 items-center">
+    <div className="room-bg w-screen h-screen flex flex-col gap-2 p-4 ">
+      <div className="flex w-full justify-between px-3">
+        <div className="flex gap-1 items-center bg-white shadow-custom p-2 rounded-md">
           <p className="font-bold">Room ID:</p>
           <p>{roomId}</p>
           <Copy
@@ -261,8 +272,8 @@ function Room() {
         </div>
 
         <div className="flex gap-1">
-          <Button onClick={handleStartGame}>Start Game</Button>
-          <Button onClick={() => navigate("/")} variant="destructive">
+          <RainbowButton className="h-10 rounded-md" onClick={handleStartGame}>Start Game</RainbowButton>
+          <Button className="shadow-custom bg-red-600 hover:bg-red-500" onClick={() => navigate("/")} >
             Quit
           </Button>
         </div>
@@ -271,34 +282,10 @@ function Room() {
       <div className="flex items-start gap-3 lg:flex-row flex-col">
         <div className="flex flex-col gap-3 w-full lg:flex-[3]">
           <div className="flex flex-col gap-2 p-2">
-            <div className="flex gap-2 items-center">
-              <label>Stroke Color</label>
-              <input
-                type="color"
-                value={strokeColor}
-                onChange={(e) => setStrokeColor(e.target.value)}
-                disabled={!isDrawer}
-              />
-              <label>Stroke Width</label>
-              <input
-                type="range"
-                min="1"
-                max="20"
-                value={strokeWidth}
-                onChange={(e) => setStrokeWidth(Number(e.target.value))}
-                disabled={!isDrawer}
-              />
-              {isDrawer && (
-                <Button variant={"outline"} onClick={clearCanvas}>
-                  Clear Canvas
-                </Button>
-              )}
-            </div>
-
             {/* word display */}
             {currentWord && (
-              <div className="flex w-full justify-center gap-2">
-                <p className="font-bold">Word:</p>
+              <div className="flex w-fit px-8 self-center justify-center gap-2 bg-lime-300 shadow-custom rounded-md p-2">
+                <p className="font-bold mt-[3px]">Word ({currentWord.length}):</p>
                 {currentWord.split("").map((_, index) => (
                   <span key={index} className="font-bold">
                     _
@@ -309,9 +296,11 @@ function Room() {
 
             {/* middle container */}
             <div className="w-full grid grid-cols-1 md:grid-cols-6 lg:flex-row flex-col items-start gap-2">
-              <div className="players flex col-span-1 flex-col border rounded-md min-h-[500px] p-2">
-                <p className="font-bold">Players</p>
-                <ol className="flex flex-col gap-0 mt-2 list-decimal list-inside">
+              <div className="players bg-white shadow-custom  flex col-span-1 flex-col border rounded-md min-h-[500px]">
+                <p className="font-bold bg-black text-white p-2 rounded-t-md text-center py-4">
+                  Players
+                </p>
+                <ol className="flex flex-col gap-0 mt-2 list-decimal list-inside p-2">
                   {players.map((player) => (
                     <li key={player.id}>
                       {player.name}
@@ -321,10 +310,10 @@ function Room() {
                   ))}
                 </ol>
               </div>
-              <div className="players flex col-span-1 md:col-span-3 lg:col-span-4  flex-col h-[500px]">
+              <div className="bg-white shadow-custom flex p-5 rounded-lg col-span-1 md:col-span-3 lg:col-span-4 flex-col h-[500px]">
                 <canvas
                   ref={canvasRef}
-                  className="border border-gray-300 rounded-lg h-full"
+                  className="border border-gray-300 rounded-lg shadow-sm h-full"
                   onMouseDown={startDrawing}
                   onMouseMove={draw}
                   onMouseUp={stopDrawing}
@@ -333,22 +322,60 @@ function Room() {
                 />
               </div>
               <div className="flex flex-col md:col-span-2 lg:col-span-1 col-span-1 gap-2">
-                <div className="comments-section flex  flex-col border rounded-md min-h-[500px] p-2">
+                <div className="shadow-custom  relative flex bg-white flex-col border rounded-md min-h-[500px]">
                   <Comments commentsData={userComments} />
+                  <div className="comment absolute bottom-2 left-0 right-0 mx-2">
+                    <input
+                      className="border rounded-md w-full px-3 py-2"
+                      value={comment}
+                      onChange={(e) => setComment(e.target.value)}
+                      placeholder="Enter your guess..."
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          handlePressEnter(e);
+                        }
+                      }}
+                    />
+                  </div>
                 </div>
-                <div className="comment">
+              </div>
+            </div>
+
+            <div className="w-fit rounded-lg self-center flex flex-col gap-2 items-center bg-white shadow-custom p-4">
+              <div className="flex space-x-2">
+                {colors.map((c) => (
+                  <button
+                    key={c}
+                    className={`w-8 h-8 rounded-full ${
+                      strokeColor === c ? "ring-2 ring-offset-2 ring-gray-400" : ""
+                    }`}
+                    style={{ backgroundColor: c }}
+                    onClick={() => setStrokeColor(c)}
+                  />
+                ))}
+                <Eraser
+                  onClick={() => setStrokeColor("white")}
+                  className="cursor-pointer h-9 w-9 bg-white border border-gray-500 shadow-lg rounded-full p-1"
+                  color="black"
+                />
+              </div>
+              <div className="flex items-center w-full gap-2 justify-between mt-2">
+                <div className="flex items-end gap-1 ">
+                  <Brush />
                   <input
-                    className="border rounded-md w-full px-3 py-2"
-                    value={comment}
-                    onChange={(e) => setComment(e.target.value)}
-                    placeholder="Enter your guess..."
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        handlePressEnter(e);
-                      }
-                    }}
+                    type="range"
+                    min="1"
+                    max="20"
+                    value={strokeWidth}
+                    onChange={(e) => setStrokeWidth(Number(e.target.value))}
+                    disabled={!isDrawer}
                   />
                 </div>
+                {isDrawer && (
+                  <Button variant={"outline"} onClick={clearCanvas} className="text-black">
+                    Erase all
+                  </Button>
+                )}
               </div>
             </div>
           </div>
@@ -358,8 +385,14 @@ function Room() {
         open={showWordsModal}
         setOpen={setShowWordsModal}
         setCurrentWord={setCurrentWord}
+        roomId={roomId}
       />
-      <WinnerModal open={showWinnerModal} setOpen={setShowWinnerModal} winner="afaq" />
+      <WinnerModal
+        open={showWinnerModal}
+        setOpen={setShowWinnerModal}
+        currentWord={currentWord}
+        winner={winnerName}
+      />
     </div>
   );
 }
