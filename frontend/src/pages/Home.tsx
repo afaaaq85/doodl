@@ -11,6 +11,7 @@ function Home() {
   const [createRoom, setCreateRoom] = useState(false);
   const [joinRoom, setJoinRoom] = useState(false);
   const navigate = useNavigate();
+  const serverUrl = import.meta.env.VITE_SERVER_URL
 
   const handleCreateRoom = async () => {
     if (!playerName) {
@@ -18,7 +19,7 @@ function Home() {
       return;
     }
     try {
-      const { data } = await axios.post("http://doodl-backend.vercel.app/api/create-room", {
+      const { data } = await axios.post(`${serverUrl}/api/create-room`, {
         playerName,
       });
       console.log("data:", data);
@@ -36,7 +37,7 @@ function Home() {
     }
     if (roomId) {
       try {
-        const response = await axios.post("http://doodl-backend.vercel.app/api/room-exists", { roomId });
+        const response = await axios.post(`${serverUrl}/api/create-room/room-exists`, { roomId });
         if (response.data.exists) {
           navigate(`/room/${roomId}`, { state: { playerName } });
         } else {
