@@ -71,7 +71,7 @@ function Room() {
 
         // Resize canvas to fill container
         canvas.width = canvas.offsetWidth;
-        canvas.height = 500;
+        canvas.height = canvas.offsetHeight;
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
