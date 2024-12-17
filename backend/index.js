@@ -17,6 +17,10 @@ let rooms = {};
 app.use(cors());
 app.use(express.json());
 
+app.get('/', (req, res) => {
+  res.send('Server is online');
+})
+
 app.post('/api/create-room', (req, res) => {
   const roomId = Math.random().toString(36).substring(2, 8);
   rooms[roomId] = { players: [], word: '' };
