@@ -18,7 +18,7 @@ function Home() {
       return;
     }
     try {
-      const { data } = await axios.post("http://localhost:5000/api/create-room", {
+      const { data } = await axios.post("http://doodl-backend.vercel.app/api/create-room", {
         playerName,
       });
       console.log("data:", data);
@@ -36,7 +36,7 @@ function Home() {
     }
     if (roomId) {
       try {
-        const response = await axios.post("http://localhost:5000/api/room-exists", { roomId });
+        const response = await axios.post("http://doodl-backend.vercel.app/api/room-exists", { roomId });
         if (response.data.exists) {
           navigate(`/room/${roomId}`, { state: { playerName } });
         } else {
