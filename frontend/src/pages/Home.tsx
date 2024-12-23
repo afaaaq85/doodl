@@ -37,7 +37,7 @@ function Home() {
     }
     if (roomId) {
       try {
-        const response = await axios.post(`${serverUrl}/api/create-room/room-exists`, { roomId });
+        const response = await axios.post(`${serverUrl}/api/room-exists`, { roomId });
         if (response.data.exists) {
           navigate(`/room/${roomId}`, { state: { playerName } });
         } else {
